@@ -10,7 +10,7 @@ def scrape_data_api():
     base_url = "https://ecshweb.pchome.com.tw/search/v4.3/all/results"
 
     page = 1
-    page_count = 50  # TODO: change to 10
+    page_count = 10
     all_items = []
     i5_prices = []
 
