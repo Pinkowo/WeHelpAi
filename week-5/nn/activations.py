@@ -13,8 +13,27 @@ def sigmoid(x):
     return 1 / (1 + math.exp(-x))
 
 
-def softmax(xs):
-    max_x = max(xs)
-    exp_x = [math.exp(v - max_x) for v in xs]
-    sum_exp_x = sum(exp_x)
-    return [v / sum_exp_x for v in exp_x]
+activation_map = {
+    "linear": linear,
+    "relu": relu,
+    "sigmoid": sigmoid,
+}
+
+
+def derivative_linear(x):
+    return 1
+
+
+def derivative_relu(x):
+    return 1 if x > 0 else 0
+
+
+def derivative_sigmoid(x):
+    return x * (1 - x)
+
+
+derivative_map = {
+    "linear": derivative_linear,
+    "relu": derivative_relu,
+    "sigmoid": derivative_sigmoid,
+}

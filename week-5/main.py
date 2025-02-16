@@ -4,7 +4,27 @@ from nn.losses.mse_loss import MSELoss
 from nn.losses.bce_loss import BinaryCrossEntropy
 from nn.activations import sigmoid
 
-repeat_times = 1
+repeat_times = 1000
+
+
+def show_layers(nn):
+    for i, layer in enumerate(nn.layers):
+        print(f"Layer {i}")
+        print(layer.weights)
+        print(layer.bias)
+
+
+def calculate(nn, inputs, expects, loss_fn, learning_rate):
+    for i in range(repeat_times):
+        outputs = nn.forward(*inputs)
+        loss = loss_fn.get_total_loss(expects, outputs)
+        if i == repeat_times - 1:
+            print("Total Loss", loss)
+        output_losses = loss_fn.get_output_losses()
+        nn.backward(output_losses)
+        nn.zero_grad(learning_rate)
+        if i == 0:
+            show_layers(nn)
 
 
 def main():
@@ -14,18 +34,12 @@ def main():
         Layer(weights=[[0.8, -0.5]], bias=[0.6], activation="linear"),
         Layer(weights=[[0.6], [-0.3]], bias=[0.4, 0.75], activation="linear"),
     )
-    expects = (0.8, 1)
+    inputs = [1.5, 0.5]
+    expects = [0.8, 1.0]
     loss_fn = MSELoss()
     learning_rate = 0.01
 
-    for i in range(repeat_times):
-        if i == 0:
-            pass  # for task1
-        outputs = nn.forward(1.5, 0.5)
-        loss = loss_fn.get_total_loss(expects, outputs)
-        output_losses = loss_fn.get_output_losses()
-        nn.backward(output_losses)
-        nn.zero_grad(learning_rate)
+    calculate(nn, inputs, expects, loss_fn, learning_rate)
 
     ###################################################
 
@@ -34,18 +48,12 @@ def main():
         Layer(weights=[[0.5, 0.2], [0.6, -0.6]], bias=[0.3, 0.25], activation="relu"),
         Layer(weights=[[0.8, 0.4]], bias=[-0.5], activation="sigmoid"),
     )
-    expects = (1,)
+    inputs = [0.75, 1.25]
+    expects = [1.0]
     loss_fn = BinaryCrossEntropy()
     learning_rate = 0.1
 
-    for i in range(repeat_times):
-        if i == 0:
-            pass  # for task1
-        outputs = nn.forward(0.75, 1.25)
-        loss = loss_fn.get_total_loss(expects, outputs)
-        output_losses = loss_fn.get_output_losses(loss)
-        nn.backward(output_losses)
-        nn.zero_grad(learning_rate)
+    calculate(nn, inputs, expects, loss_fn, learning_rate)
 
 
 if __name__ == "__main__":

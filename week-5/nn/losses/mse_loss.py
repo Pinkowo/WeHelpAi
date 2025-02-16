@@ -1,17 +1,18 @@
 class MSELoss:
     def __init__(self):
-        self.loss = 0.0
-        self.output_losses = []
-
-    def cal_loss(self, expects, outputs):
-        for e, o in zip(expects, outputs):
-            self.loss += (e - o) ** 2
-            self.output_losses.append(2 * (e - o))
-        self.loss /= len(outputs)
+        self.expects = []
+        self.outputs = []
 
     def get_total_loss(self, expects, outputs):
-        self.cal_loss(expects, outputs)
-        return self.loss
+        loss = 0
+        self.expects = expects
+        self.outputs = outputs
+        for e, o in zip(self.expects, self.outputs):
+            loss += (e - o) ** 2
+        return loss / len(self.outputs)
 
     def get_output_losses(self):
-        return self.output_losses
+        output_losses = []
+        for e, o in zip(self.expects, self.outputs):
+            output_losses.append((o - e))
+        return output_losses
