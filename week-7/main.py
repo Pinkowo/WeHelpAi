@@ -1,6 +1,6 @@
 import os
 
-# import pandas as pd
+import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
@@ -84,13 +84,12 @@ class RegressionNeuralNet(nn.Module):
 def task1():
     dataset = GenderHeightWeightDataset()
 
-    batch_size = 1000
+    batch_size = 128
     val_split = 0.2
     shuffle_dataset = True
-    random_seed = 1234
 
     train_sampler, test_sampler = dataSplit(
-        dataset, val_split=val_split, shuffle=shuffle_dataset, random_seed=random_seed
+        dataset, val_split=val_split, shuffle=shuffle_dataset
     )
 
     train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler)
@@ -129,12 +128,129 @@ def task1():
             samples += len(expects)
 
         mean_mse = mse_sum / samples
-        print("Test MSE:", mean_mse)
+        # print("Test MSE:", mean_mse)
         test_rmse_z = mean_mse**0.5
-        print("Test RMSE:", test_rmse_z)
+        # print("Test RMSE:", test_rmse_z)
         mean, std = zscore_params["Weight"]
         test_rmse_pounds = test_rmse_z * std
-        print("Test RMSE (pounds):", test_rmse_pounds)
+        print("Regression Task RMSE (pounds):", test_rmse_pounds)
+
+
+###########################
+
+
+def get_ages(xy):
+    xy["Title"] = xy["Name"].apply(
+        lambda name: name.split(",")[1].split(".")[0].strip()
+    )
+    title_age_mean = xy.groupby("Title")["Age"].mean()
+
+    def fill_missing_age(passenger):
+        if pd.isna(passenger["Age"]):
+            title = passenger["Title"]
+            if title in title_age_mean:
+                return title_age_mean[title]
+            else:
+                return xy["Age"].mean()
+        return passenger["Age"]
+
+    ages = xy.apply(fill_missing_age, axis=1)
+    return ages
+
+
+class TitanicDataset(Dataset):
+    def __init__(self):
+        xy = pd.read_csv(
+            "data/titanic.csv",
+        )
+
+        pclasses = xy["Pclass"]
+        genders = np.array(
+            [0 if gender.strip('"') == "male" else 1 for gender in xy["Sex"]],
+            dtype=np.float64,
+        )
+        ages = zscore(get_ages(xy), "Age")
+        families = xy.apply(lambda row: row["SibSp"] + row["Parch"], axis=1)
+        fares = xy["Fare"]
+
+        self.x = np.column_stack((pclasses, genders, ages, families, fares))
+        self.y = xy["Survived"]
+        self.n_samples = xy.shape[0]
+
+    def __len__(self):
+        return self.n_samples
+
+    def __getitem__(self, index):
+        return self.x[index], self.y[index]
+
+
+class BinaryClassificationNeuralNet(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(BinaryClassificationNeuralNet, self).__init__()
+        self.l1 = nn.Linear(input_size, hidden_size)
+        self.relu = nn.ReLU()
+        self.l2 = nn.Linear(hidden_size, output_size)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        out = self.l1(x)
+        out = self.relu(out)
+        out = self.l2(out)
+        out = self.sigmoid(out)
+        return out
+
+
+def task2():
+    dataset = TitanicDataset()
+
+    batch_size = 32
+    val_split = 0.2
+    shuffle_dataset = True
+    random_seed = 42
+
+    train_sampler, test_sampler = dataSplit(
+        dataset, val_split=val_split, shuffle=shuffle_dataset, random_seed=random_seed
+    )
+
+    train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler)
+    test_loader = DataLoader(dataset, batch_size=batch_size, sampler=test_sampler)
+
+    input_size = 5
+    hidden_size = 8
+    output_size = 1
+    model = BinaryClassificationNeuralNet(input_size, hidden_size, output_size)
+
+    epochs = 100
+    batch_size = 4
+    learning_rate = 0.01
+    criterion = nn.BCELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    for epoch in range(epochs):
+        for i, (inputs, expects) in enumerate(train_loader):
+            inputs = inputs.float()
+            expects = expects.float().unsqueeze(1)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, expects)
+            loss.backward()
+            optimizer.step()
+
+    with torch.no_grad():
+        correct_count = 0
+        threshold = 0.5
+        total_samples = 0
+
+        for inputs, expects in test_loader:
+            inputs = inputs.float()
+            expects = expects.float().unsqueeze(1)
+            output = model(inputs)
+            predictions = (output > threshold).float()
+            correct_count += (predictions == expects).sum().item()
+            total_samples += expects.shape[0]
+
+        correct_rate = correct_count / total_samples
+        print("Binary Classification Task Correct Rate: {:.2%}".format(correct_rate))
 
 
 ###########################
@@ -142,6 +258,7 @@ def task1():
 
 def main():
     task1()
+    task2()
 
 
 if __name__ == "__main__":
