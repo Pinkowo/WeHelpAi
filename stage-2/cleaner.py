@@ -1,6 +1,7 @@
 import csv
 import os
 import re
+import pandas as pd
 
 
 def extract_category(title):
@@ -32,6 +33,8 @@ def process_csv_file(filepath):
             cleaned = clean_title(original_title)
             category, extracted_title = extract_category(cleaned)
             final_title = extracted_title.strip().lower()
+            if category == "公告" or final_title == "deleted":
+                continue
             row["category"] = category
             row["title"] = final_title
             cleaned_rows.append(row)
@@ -48,7 +51,7 @@ def combine_csv_files(input_dir, output_file):
             all_rows.extend(rows)
 
     if all_rows:
-        fieldnames = ["push", "board", "category", "title"]
+        fieldnames = ["board", "category", "title"]
         for key in all_rows[0].keys():
             if key not in fieldnames:
                 fieldnames.append(key)
@@ -64,10 +67,18 @@ def combine_csv_files(input_dir, output_file):
         print("No data found to write.")
 
 
+def remove_duplicate_titles(input_csv, output_csv):
+    df = pd.read_csv(input_csv)
+    df_unique = df.drop_duplicates(subset=["title"])
+    df_unique.to_csv(output_csv, index=False, encoding="utf-8")
+    print(f"Saved {len(df_unique)} unique rows to {output_csv}")
+
+
 def main():
     input_dir = "data"
     output_file = "data-clean.csv"
     combine_csv_files(input_dir, output_file)
+    remove_duplicate_titles(output_file, output_file)
 
 
 if __name__ == "__main__":
