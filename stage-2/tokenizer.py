@@ -62,7 +62,9 @@ def process_csv_file(filepath):
     ws_results = ws_driver(titles, batch_size=256)
     pos_results = pos_driver(ws_results)
 
-    for board, sentence_ws, sentence_pos in zip(boards, ws_results, pos_results):
+    for board, category, sentence_ws, sentence_pos in zip(
+        boards, categories, ws_results, pos_results
+    ):
         packed_sentence = pack_ws_pos_sentence(sentence_ws, sentence_pos)
         tokenized_title = tokenize_title(packed_sentence)
         cleaned_rows.append(
